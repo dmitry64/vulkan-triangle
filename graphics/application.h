@@ -23,21 +23,8 @@
 
 #include "window/window.h"
 #include "debugcallbacks.h"
+#include "helperfunctions.h"
 
-struct QueueFamilyIndices {
-    int graphicsFamily = -1;
-    int presentFamily = -1;
-
-    bool isComplete() const{
-        return graphicsFamily >= 0 && presentFamily >= 0;
-    }
-};
-
-struct SwapChainSupportDetails {
-    vk::SurfaceCapabilitiesKHR capabilities;
-    std::vector<vk::SurfaceFormatKHR> formats;
-    std::vector<vk::PresentModeKHR> presentModes;
-};
 
 struct Vertex {
     glm::vec3 pos;
@@ -113,6 +100,8 @@ private:
     vk::Device _device;
     vk::Queue _graphicsQueue;
     vk::Queue _presentQueue;
+
+    QueueFamilyIndices _queueFamilyIndices;
 
     vk::SwapchainKHR _swapChain;
     std::vector<vk::Image> _swapChainImages;
@@ -194,26 +183,8 @@ private:
     void transitionImageLayout(vk::Image image, vk::Format format, vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
     void copyImage(vk::Image srcImage, vk::Image dstImage, uint32_t width, uint32_t height);
 
-    void createBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties, vk::Buffer& buffer, vk::DeviceMemory& bufferMemory);
 
-    void copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size);
-    uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties);
-    vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features);
-    vk::Format findDepthFormat();
 
-    vk::CommandBuffer beginSingleTimeCommands();
-    void endSingleTimeCommands(vk::CommandBuffer commandBuffer);
-    QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice &device);
-    SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice &device);
-    vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const;
-    static std::vector<char> readFile(const std::string& filename);
-    void createShaderModule(const std::vector<char>& code, vk::ShaderModule& shaderModule);
-
-private:
-    static bool checkValidationLayerSupport();
-    static bool hasStencilComponent(vk::Format format);
-    static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
-    static vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> &availablePresentModes);
 };
 
 
