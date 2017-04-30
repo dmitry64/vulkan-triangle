@@ -83,7 +83,7 @@ void Window::setSize(uint32_t width, uint32_t height)
     _height = height;
 }
 
-Window::Window() : _width(1024), _height(600), window(nullptr)
+Window::Window() : _width(640), _height(480), window(nullptr)
 {
 
 }

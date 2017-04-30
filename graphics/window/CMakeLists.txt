@@ -1,5 +1,2 @@
-file(GLOB Sources "*.cpp")
-file(GLOB Headers "*.h")
-
-add_library(window STATIC ${Sources})
+add_library(window SHARED "window.cpp" "window.h")
 target_link_libraries(window glfw3 vulkan)
