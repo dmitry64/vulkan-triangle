@@ -97,8 +97,10 @@ void Application::destroyVulkan()
 
     _device.destroyRenderPass(_renderPass);
     _device.destroySwapchainKHR(_swapChain);
-
-    _device.destroy(nullptr);
+    _device.destroy();
+    DestroyDebugReportCallbackEXT(_instance, _callback, nullptr);
+    _instance.destroySurfaceKHR(_surface);
+    _instance.destroy();
 }
 
 void Application::createInstance()
@@ -119,7 +121,7 @@ void Application::createInstance()
     vk::InstanceCreateInfo createInfo;
     createInfo.pApplicationInfo = &appInfo;
 
-    auto extensions = _window.getRequiredExtensions(enableValidationLayers);
+    const std::vector<const char*>& extensions = _window.getRequiredExtensions(enableValidationLayers);
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
 
@@ -127,6 +129,7 @@ void Application::createInstance()
         createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
     } else {
+        createInfo.ppEnabledLayerNames = nullptr;
         createInfo.enabledLayerCount = 0;
     }
 
@@ -268,9 +271,7 @@ void Application::createSwapChain()
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
-
-    vk::SwapchainKHR oldSwapChain = _swapChain;
-    createInfo.oldSwapchain = oldSwapChain;
+    createInfo.oldSwapchain = _swapChain;
 
     vk::SwapchainKHR newSwapChain;
     vk::Result res = _device.createSwapchainKHR(&createInfo, nullptr, &newSwapChain);

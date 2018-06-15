@@ -222,7 +222,7 @@ static vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilit
     }
 }
 
-static SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice& device, vk::SurfaceKHR surface)
+static SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice& device, vk::SurfaceKHR& surface)
 {
     SwapChainSupportDetails details;
     device.getSurfaceCapabilitiesKHR(surface, &details.capabilities);

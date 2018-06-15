@@ -1,6 +1,7 @@
 #include "window.h"
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
+#include <iostream>
 
 uint32_t Window::width() const
 {
@@ -48,7 +49,15 @@ std::vector<const char*> Window::getRequiredExtensions(bool validation)
 
 void Window::init()
 {
-    glfwInit();
+    if (!glfwInit()) {
+        std::cerr << "Failed to init glfw!" << std::endl;
+        std::abort();
+    }
+
+    if (!glfwVulkanSupported()) {
+        std::cerr << "glfw vulkan not supported!" << std::endl;
+        std::abort();
+    }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
