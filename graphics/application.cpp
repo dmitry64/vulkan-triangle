@@ -580,7 +580,7 @@ void Application::updateUniformBuffer()
     ubo.proj = glm::perspective(glm::radians(46.0f), ratio, 0.1f, 100.0f);
     ubo.proj[1][1] *= -1.0f;
     void* dataPtr = nullptr;
-    _graphicsQueue.waitIdle();
+
     vk::Result res = _device.mapMemory(_uniformStagingBufferMemory, vk::DeviceSize(0), sizeof(UniformBufferObject), vk::MemoryMapFlags(), &dataPtr);
     if (res != vk::Result::eSuccess) {
         std::cerr << "Failed to map memory for uniform buffer! error:" << res << std::endl;
@@ -589,7 +589,6 @@ void Application::updateUniformBuffer()
     memcpy(dataPtr, &ubo, sizeof(UniformBufferObject));
     _device.unmapMemory(_uniformStagingBufferMemory);
     copyBuffer(_device, _commandPool, _graphicsQueue, _uniformStagingBuffer, _uniformBuffer, sizeof(UniformBufferObject));
-    _graphicsQueue.waitIdle();
 }
 
 void Application::drawFrame()
