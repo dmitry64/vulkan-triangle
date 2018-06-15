@@ -53,7 +53,55 @@ void Application::mainLoop()
     _window.destroy();
 }
 
-void Application::destroyVulkan() {}
+void Application::destroyVulkan()
+{
+    _graphicsQueue.waitIdle();
+    _presentQueue.waitIdle();
+    for (const vk::Fence& fence : _waitFences) {
+        _device.destroyFence(fence);
+    }
+
+    for (const vk::Framebuffer& framebuffer : _swapChainFramebuffers) {
+        _device.destroyFramebuffer(framebuffer);
+    }
+
+    for (const vk::ImageView& imageview : _swapChainImageViews) {
+        _device.destroyImageView(imageview);
+    }
+
+    _device.destroySemaphore(_imageAvailableSemaphore);
+    _device.destroySemaphore(_renderFinishedSemaphore);
+
+    _device.destroyBuffer(_vertexBuffer);
+    _device.destroyBuffer(_indexBuffer);
+    _device.destroyBuffer(_uniformStagingBuffer);
+    _device.destroyBuffer(_uniformBuffer);
+    _device.destroyImage(_depthImage);
+
+    _device.freeMemory(_vertexBufferMemory);
+    _device.freeMemory(_indexBufferMemory);
+    _device.freeMemory(_uniformStagingBufferMemory);
+    _device.freeMemory(_uniformBufferMemory);
+    _device.freeMemory(_depthImageMemory);
+    _device.destroyImageView(_depthImageView);
+
+    _device.destroyDescriptorSetLayout(_descriptorSetLayout);
+    _device.destroyDescriptorPool(_descriptorPool);
+
+    _device.destroyCommandPool(_commandPool);
+
+    _device.destroyShaderModule(_vertShaderModule);
+    _device.destroyShaderModule(_fragShaderModule);
+    _device.destroyPipelineCache(_cache);
+    _device.destroyPipelineLayout(_pipelineLayout);
+    _device.destroyPipeline(_graphicsPipeline);
+
+    _device.destroySwapchainKHR(_swapChain);
+
+    _device.destroyRenderPass(_renderPass);
+
+    _device.destroy(nullptr);
+}
 
 void Application::createInstance()
 {
@@ -80,8 +128,7 @@ void Application::createInstance()
     if (enableValidationLayers) {
         createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
-    }
-    else {
+    } else {
         createInfo.enabledLayerCount = 0;
     }
 
@@ -104,8 +151,7 @@ void Application::setupDebugCallback()
         if (res != VK_SUCCESS) {
             std::cerr << "Failed to set up debug callback! error:" << res << std::endl;
         }
-    }
-    else {
+    } else {
         std::cerr << "No callbacks..." << std::endl;
     }
 }
@@ -150,7 +196,7 @@ void Application::createLogicalDevice()
     std::cerr << "Creating logical device..." << std::endl;
 
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
-    std::set<int> uniqueQueueFamilies = {_queueFamilyIndices.graphicsFamily, _queueFamilyIndices.presentFamily};
+    std::set<int> uniqueQueueFamilies = { _queueFamilyIndices.graphicsFamily, _queueFamilyIndices.presentFamily };
 
     float queuePriority = 1.0f;
     for (int queueFamily : uniqueQueueFamilies) {
@@ -174,8 +220,7 @@ void Application::createLogicalDevice()
     if (enableValidationLayers) {
         createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
-    }
-    else {
+    } else {
         createInfo.enabledLayerCount = 0;
     }
     vk::Result res = _physicalDevice.createDevice(&createInfo, nullptr, &_device);
@@ -210,14 +255,13 @@ void Application::createSwapChain()
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
-    uint32_t queueFamilyIndices[] = {static_cast<uint32_t>(_queueFamilyIndices.graphicsFamily), static_cast<uint32_t>(_queueFamilyIndices.presentFamily)};
+    uint32_t queueFamilyIndices[] = { static_cast<uint32_t>(_queueFamilyIndices.graphicsFamily), static_cast<uint32_t>(_queueFamilyIndices.presentFamily) };
 
     if (_queueFamilyIndices.graphicsFamily != _queueFamilyIndices.presentFamily) {
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
         createInfo.queueFamilyIndexCount = 2;
         createInfo.pQueueFamilyIndices = queueFamilyIndices;
-    }
-    else {
+    } else {
         createInfo.imageSharingMode = vk::SharingMode::eExclusive;
     }
 
@@ -293,7 +337,7 @@ void Application::createRenderPass()
     dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
-    std::array<vk::AttachmentDescription, 2> attachments = {{colorAttachment, depthAttachment}};
+    std::array<vk::AttachmentDescription, 2> attachments = { { colorAttachment, depthAttachment } };
 
     vk::RenderPassCreateInfo renderPassInfo;
     renderPassInfo.attachmentCount = attachments.size();
@@ -318,26 +362,23 @@ void Application::createGraphicsPipeline()
     const auto vertShaderCode = readFile("shaders/vert.spv");
     const auto fragShaderCode = readFile("shaders/frag.spv");
 
-    vk::ShaderModule vertShaderModule;
-    vk::ShaderModule fragShaderModule;
-
     std::cerr << "Creating vertex shader..." << std::endl;
-    createShaderModule(_device, vertShaderCode, vertShaderModule);
+    createShaderModule(_device, vertShaderCode, _vertShaderModule);
     std::cerr << "Creating fragment shader..." << std::endl;
-    createShaderModule(_device, fragShaderCode, fragShaderModule);
+    createShaderModule(_device, fragShaderCode, _fragShaderModule);
     std::cerr << "Shaders created!" << std::endl;
 
     vk::PipelineShaderStageCreateInfo vertShaderStageInfo;
     vertShaderStageInfo.stage = vk::ShaderStageFlagBits::eVertex;
-    vertShaderStageInfo.module = vertShaderModule;
+    vertShaderStageInfo.module = _vertShaderModule;
     vertShaderStageInfo.pName = "main";
 
     vk::PipelineShaderStageCreateInfo fragShaderStageInfo;
     fragShaderStageInfo.stage = vk::ShaderStageFlagBits::eFragment;
-    fragShaderStageInfo.module = fragShaderModule;
+    fragShaderStageInfo.module = _fragShaderModule;
     fragShaderStageInfo.pName = "main";
 
-    vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+    vk::PipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
     auto bindingDescription = Vertex::getBindingDescription();
     auto attributeDescriptions = Vertex::getAttributeDescriptions();
@@ -381,9 +422,9 @@ void Application::createGraphicsPipeline()
     colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
     colorBlendAttachment.blendEnable = VK_FALSE;
 
-    vk::PipelineColorBlendStateCreateInfo colorBlending(vk::PipelineColorBlendStateCreateFlags(), VK_FALSE, vk::LogicOp::eCopy, 1, &colorBlendAttachment, {{0.0f, 0.0f, 0.0f, 0.0f}});
+    vk::PipelineColorBlendStateCreateInfo colorBlending(vk::PipelineColorBlendStateCreateFlags(), VK_FALSE, vk::LogicOp::eCopy, 1, &colorBlendAttachment, { { 0.0f, 0.0f, 0.0f, 0.0f } });
 
-    vk::DescriptorSetLayout setLayouts[] = {_descriptorSetLayout};
+    vk::DescriptorSetLayout setLayouts[] = { _descriptorSetLayout };
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = setLayouts;
@@ -420,7 +461,7 @@ void Application::createFramebuffers()
 
     size_t size = _swapChainImageViews.size();
     for (size_t i = 0; i < size; i++) {
-        std::array<vk::ImageView, 2> attachments = {{_swapChainImageViews[i], _depthImageView}};
+        std::array<vk::ImageView, 2> attachments = { { _swapChainImageViews[i], _depthImageView } };
 
         vk::FramebufferCreateInfo framebufferInfo;
         framebufferInfo.renderPass = _renderPass;
@@ -479,14 +520,14 @@ void Application::createCommandBuffers()
         renderPassInfo.renderArea.extent = _swapChainExtent;
 
         std::array<vk::ClearValue, 2> clearValues = {};
-        clearValues[0].color = vk::ClearColorValue(std::array<float, 4>{{0.1f, 0.2f, 0.1f, 1.0f}});
+        clearValues[0].color = vk::ClearColorValue(std::array<float, 4>{ { 0.1f, 0.2f, 0.1f, 1.0f } });
         clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.0f, 0);
 
         renderPassInfo.clearValueCount = clearValues.size();
         renderPassInfo.pClearValues = clearValues.data();
 
-        vk::Buffer vertexBuffers[] = {_vertexBuffer};
-        vk::DeviceSize offsets[] = {0};
+        vk::Buffer vertexBuffers[] = { _vertexBuffer };
+        vk::DeviceSize offsets[] = { 0 };
 
         if (_commandBuffers[i].begin(&beginInfo) == vk::Result::eSuccess) {
             _commandBuffers[i].beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
@@ -499,8 +540,7 @@ void Application::createCommandBuffers()
 
             _commandBuffers[i].endRenderPass();
             _commandBuffers[i].end();
-        }
-        else {
+        } else {
             std::cerr << "Command buffers bind fail!" << std::endl;
             std::abort();
         }
@@ -559,8 +599,7 @@ void Application::drawFrame()
     if (result == vk::Result::eErrorOutOfDateKHR) {
         recreateSwapChain();
         return;
-    }
-    else if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR) {
+    } else if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR) {
         std::cerr << "Failed to acquire swap chain image! error:" << result << std::endl;
         std::abort();
     }
@@ -569,15 +608,15 @@ void Application::drawFrame()
     _device.resetFences(1, &_waitFences[imageIndex]);
 
     vk::SubmitInfo submitInfo;
-    vk::Semaphore waitSemaphores[] = {_imageAvailableSemaphore};
-    vk::PipelineStageFlags waitStages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
+    vk::Semaphore waitSemaphores[] = { _imageAvailableSemaphore };
+    vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &_commandBuffers[imageIndex];
 
-    vk::Semaphore signalSemaphores[] = {_renderFinishedSemaphore};
+    vk::Semaphore signalSemaphores[] = { _renderFinishedSemaphore };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -591,7 +630,7 @@ void Application::drawFrame()
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
 
-    vk::SwapchainKHR swapChains[] = {_swapChain};
+    vk::SwapchainKHR swapChains[] = { _swapChain };
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
@@ -599,8 +638,7 @@ void Application::drawFrame()
     vk::Result presentResult = _presentQueue.presentKHR(&presentInfo);
     if (presentResult == vk::Result::eErrorOutOfDateKHR || presentResult == vk::Result::eSuboptimalKHR) {
         recreateSwapChain();
-    }
-    else if (presentResult != vk::Result::eSuccess) {
+    } else if (presentResult != vk::Result::eSuccess) {
         std::cerr << "failed to present swap chain image! error:" << presentResult << std::endl;
         std::abort();
     }
@@ -636,6 +674,8 @@ void Application::createVertexBuffer()
 
     createBuffer(_device, _physicalDevice, bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal, _vertexBuffer, _vertexBufferMemory);
     copyBuffer(_device, _commandPool, _graphicsQueue, stagingBuffer, _vertexBuffer, bufferSize);
+    _device.destroyBuffer(stagingBuffer);
+    _device.freeMemory(stagingBufferMemory);
 }
 
 void Application::createIndexBuffer()
@@ -655,6 +695,8 @@ void Application::createIndexBuffer()
 
     createBuffer(_device, _physicalDevice, bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal, _indexBuffer, _indexBufferMemory);
     copyBuffer(_device, _commandPool, _graphicsQueue, stagingBuffer, _indexBuffer, bufferSize);
+    _device.destroyBuffer(stagingBuffer);
+    _device.freeMemory(stagingBufferMemory);
 }
 
 void Application::createDescriptorSetLayout()
@@ -666,7 +708,7 @@ void Application::createDescriptorSetLayout()
     uboLayoutBinding.pImmutableSamplers = nullptr;
     uboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
 
-    std::array<vk::DescriptorSetLayoutBinding, 1> bindings = {{uboLayoutBinding}};
+    std::array<vk::DescriptorSetLayoutBinding, 1> bindings = { { uboLayoutBinding } };
 
     vk::DescriptorSetLayoutCreateInfo layoutInfo;
     layoutInfo.bindingCount = bindings.size();
@@ -714,8 +756,7 @@ void Application::createTextureImage()
 
     if (stagingImageLayout.rowPitch == texWidth * 4) {
         memcpy(dataPtr, pixels, static_cast<size_t>(imageSize));
-    }
-    else {
+    } else {
         uint8_t* dataBytes = reinterpret_cast<uint8_t*>(dataPtr);
 
         for (int y = 0; y < texHeight; y++) {
@@ -866,7 +907,6 @@ void Application::transitionImageLayout(vk::Image image, vk::Format format, vk::
 
     vk::CommandBuffer commandBuffer = beginSingleTimeCommands(_device, _commandPool);
 
-
     vk::ImageMemoryBarrier barrier;
     barrier.oldLayout = oldLayout;
     barrier.newLayout = newLayout;
@@ -880,8 +920,7 @@ void Application::transitionImageLayout(vk::Image image, vk::Format format, vk::
         if (hasStencilComponent(format)) {
             barrier.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
         }
-    }
-    else {
+    } else {
         barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
     }
 
@@ -897,19 +936,16 @@ void Application::transitionImageLayout(vk::Image image, vk::Format format, vk::
         barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
         sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
         destinationStage = vk::PipelineStageFlagBits::eTransfer;
-    }
-    else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
+    } else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
         barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
         barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
         sourceStage = vk::PipelineStageFlagBits::eTransfer;
         destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
-    }
-    else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
-        barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;  // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    } else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+        barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite; // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
         destinationStage = vk::PipelineStageFlagBits::eEarlyFragmentTests;
-    }
-    else {
+    } else {
         std::cout << "Failed to transition layout!" << std::endl;
         std::abort();
     }
@@ -969,7 +1005,7 @@ void Application::createDescriptorPool()
 
 void Application::createDescriptorSet()
 {
-    vk::DescriptorSetLayout layouts[] = {_descriptorSetLayout};
+    vk::DescriptorSetLayout layouts[] = { _descriptorSetLayout };
     vk::DescriptorSetAllocateInfo allocInfo = {};
     allocInfo.descriptorPool = _descriptorPool;
     allocInfo.descriptorSetCount = 1;

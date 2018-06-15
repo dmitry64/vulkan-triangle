@@ -6,17 +6,15 @@
 #include <iostream>
 #include <vulkan/vulkan.hpp>
 
-struct SwapChainSupportDetails
-{
+struct SwapChainSupportDetails {
     vk::SurfaceCapabilitiesKHR capabilities;
     std::vector<vk::SurfaceFormatKHR> formats;
     std::vector<vk::PresentModeKHR> presentModes;
 };
 
-const std::vector<const char*> validationLayers = {"VK_LAYER_LUNARG_standard_validation", "VK_LAYER_LUNARG_parameter_validation", "VK_LAYER_LUNARG_parameter_validation", "VK_LAYER_LUNARG_object_tracker", "VK_LAYER_GOOGLE_threading", "VK_LAYER_LUNARG_core_validation"};
+const std::vector<const char*> validationLayers = { "VK_LAYER_LUNARG_standard_validation", "VK_LAYER_LUNARG_parameter_validation", "VK_LAYER_LUNARG_parameter_validation", "VK_LAYER_LUNARG_object_tracker", "VK_LAYER_GOOGLE_threading", "VK_LAYER_LUNARG_core_validation" };
 
-struct QueueFamilyIndices
-{
+struct QueueFamilyIndices {
     int graphicsFamily = -1;
     int presentFamily = -1;
 
@@ -57,7 +55,7 @@ static bool hasStencilComponent(vk::Format format)
 static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)
 {
     if (availableFormats.size() == 1 && availableFormats[0].format == vk::Format::eUndefined) {
-        return {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
+        return { vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
     }
     for (const auto& availableFormat : availableFormats) {
         if (availableFormat.format == vk::Format::eB8G8R8A8Unorm && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
@@ -73,8 +71,7 @@ static vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentMod
     for (const auto& availablePresentMode : availablePresentModes) {
         if (availablePresentMode == vk::PresentModeKHR::eMailbox) {
             return availablePresentMode;
-        }
-        else if (availablePresentMode == vk::PresentModeKHR::eImmediate) {
+        } else if (availablePresentMode == vk::PresentModeKHR::eImmediate) {
             bestMode = availablePresentMode;
         }
     }
@@ -89,8 +86,7 @@ static vk::Format findSupportedFormat(vk::PhysicalDevice& physicalDevice, const 
 
         if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
             return format;
-        }
-        else if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
+        } else if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
             return format;
         }
     }
@@ -101,7 +97,7 @@ static vk::Format findSupportedFormat(vk::PhysicalDevice& physicalDevice, const 
 
 static vk::Format findDepthFormat(vk::PhysicalDevice& physicalDevice)
 {
-    return findSupportedFormat(physicalDevice, {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint}, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+    return findSupportedFormat(physicalDevice, { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint }, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 }
 
 static std::vector<char> readFile(const std::string& filename)
@@ -119,8 +115,7 @@ static std::vector<char> readFile(const std::string& filename)
         file.read(buffer.data(), fileSize);
         file.close();
         return buffer;
-    }
-    else {
+    } else {
         std::cerr << "Empty file: " << filename << std::endl;
         std::abort();
     }
@@ -215,9 +210,8 @@ static vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilit
 {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
-    }
-    else {
-        vk::Extent2D actualExtent = {width, height};
+    } else {
+        vk::Extent2D actualExtent = { width, height };
         actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
         actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
         return actualExtent;
@@ -286,8 +280,7 @@ static void copyBuffer(vk::Device& device, vk::CommandPool& commandPool, vk::Que
     if (commandBuffer.begin(&beginInfo) == vk::Result::eSuccess) {
         commandBuffer.copyBuffer(srcBuffer, dstBuffer, 1, &copyRegion);
         commandBuffer.end();
-    }
-    else {
+    } else {
         std::cerr << "Failed to begin command buffer!" << std::endl;
         std::abort();
     }
@@ -296,13 +289,26 @@ static void copyBuffer(vk::Device& device, vk::CommandPool& commandPool, vk::Que
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    vk::Result res = graphicsQueue.submit(1, &submitInfo, nullptr);
-    if (res != vk::Result::eSuccess) {
-        std::cerr << "Graphics queue submit failed!" << std::endl;
+    vk::FenceCreateInfo fenceCreateInfo = {};
+    vk::Fence fence;
+    vk::Result fenceCreateRes = device.createFence(&fenceCreateInfo, nullptr, &fence);
+    if (fenceCreateRes != vk::Result::eSuccess) {
+        std::cerr << "Failed to create fence! error:" << fenceCreateRes << std::endl;
         std::abort();
     }
-    graphicsQueue.waitIdle();
+
+    vk::Result submitRes = graphicsQueue.submit(1, &submitInfo, fence);
+    if (submitRes != vk::Result::eSuccess) {
+        std::cerr << "Graphics queue submit failed! error:" << submitRes << std::endl;
+        std::abort();
+    }
+    vk::Result fenceWaitRes = device.waitForFences(1, &fence, VK_TRUE, 3 * 1000 * 1000);
+    if (fenceWaitRes != vk::Result::eSuccess) {
+        std::cerr << "Wait on fence failed! error:" << fenceWaitRes << std::endl;
+        std::abort();
+    }
+    device.destroyFence(fence, nullptr);
     device.freeCommandBuffers(commandPool, 1, &commandBuffer);
 }
 
-#endif  // HELPERFUNCTIONS_H
+#endif // HELPERFUNCTIONS_H
