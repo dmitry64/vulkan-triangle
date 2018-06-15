@@ -780,53 +780,6 @@ void Application::createImage(uint32_t width, uint32_t height, vk::Format format
 
 void Application::transitionImageLayout(vk::Image image, vk::Format format, vk::ImageLayout oldLayout, vk::ImageLayout newLayout)
 {
-    /* vk::CommandBuffer commandBuffer = beginSingleTimeCommands(_device, _commandPool);
-
-     vk::ImageMemoryBarrier barrier;
-     barrier.oldLayout = oldLayout;
-     barrier.newLayout = newLayout;
-     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-     barrier.image = image;
-     if (newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
-         barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
-
-         if (hasStencilComponent(format)) {
-             barrier.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
-         }
-     }
-     else {
-         barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-     }
-     barrier.subresourceRange.baseMipLevel = 0;
-     barrier.subresourceRange.levelCount = 1;
-     barrier.subresourceRange.baseArrayLayer = 0;
-     barrier.subresourceRange.layerCount = 1;
-
-     if (oldLayout == vk::ImageLayout::ePreinitialized && newLayout == vk::ImageLayout::eTransferSrcOptimal) {
-         barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
-         barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
-     }
-     else if (oldLayout == vk::ImageLayout::ePreinitialized && newLayout == vk::ImageLayout::eTransferDstOptimal) {
-         barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
-         barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-     }
-     else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-         barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-         barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-     }
-     else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
-         barrier.srcAccessMask = vk::AccessFlags();
-         barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-     }
-     else {
-         std::cerr << "unsupported layout transition!" << std::endl;
-         std::abort();
-     }
-
-     commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1, &barrier);
-     endSingleTimeCommands(_device, _graphicsQueue, _commandPool, commandBuffer);*/
-
     vk::CommandBuffer commandBuffer = beginSingleTimeCommands(_device, _commandPool);
 
     vk::ImageMemoryBarrier barrier;
