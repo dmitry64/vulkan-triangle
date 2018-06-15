@@ -817,7 +817,7 @@ void Application::transitionImageLayout(vk::Image image, vk::Format format, vk::
         sourceStage = vk::PipelineStageFlagBits::eTransfer;
         destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
     } else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
-        barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite; // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
         sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
         destinationStage = vk::PipelineStageFlagBits::eEarlyFragmentTests;
     } else {
@@ -843,10 +843,7 @@ void Application::createDescriptorPool()
     poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
     poolSizes[0].descriptorCount = 1;
 
-    vk::DescriptorPoolCreateInfo poolInfo = {};
-    poolInfo.poolSizeCount = poolSizes.size();
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = 1;
+    vk::DescriptorPoolCreateInfo poolInfo(vk::DescriptorPoolCreateFlags(), 1, poolSizes.size(), poolSizes.data());
 
     if (_device.createDescriptorPool(&poolInfo, nullptr, &_descriptorPool) != vk::Result::eSuccess) {
         std::cerr << "Failed to create descriptor pool!" << std::endl;
@@ -856,21 +853,14 @@ void Application::createDescriptorPool()
 
 void Application::createDescriptorSet()
 {
-    vk::DescriptorSetLayout layouts[] = { _descriptorSetLayout };
-    vk::DescriptorSetAllocateInfo allocInfo = {};
-    allocInfo.descriptorPool = _descriptorPool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = layouts;
+    vk::DescriptorSetAllocateInfo allocInfo(_descriptorPool, 1, &_descriptorSetLayout);
 
     if (_device.allocateDescriptorSets(&allocInfo, &_descriptorSet) != vk::Result::eSuccess) {
         std::cerr << "Failed to allocate descriptor set!" << std::endl;
         std::abort();
     }
 
-    vk::DescriptorBufferInfo bufferInfo;
-    bufferInfo.buffer = _uniformBuffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range = sizeof(UniformBufferObject);
+    vk::DescriptorBufferInfo bufferInfo(_uniformBuffer, 0, sizeof(UniformBufferObject));
 
     std::array<vk::WriteDescriptorSet, 1> descriptorWrites = {};
 
