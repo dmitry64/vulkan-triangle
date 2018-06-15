@@ -113,7 +113,7 @@ void Application::setupDebugCallback()
 void Application::createSurface()
 {
     std::cerr << "Creating surface..." << std::endl;
-    vk::Result res = _window.createSurface(_instance, nullptr, _surface);
+    vk::Result res = _window.createSurface(_instance, _surface);
     if (res != vk::Result::eSuccess) {
         std::cerr << "Failed to create surface! error:" << res << std::endl;
         std::abort();
@@ -352,21 +352,11 @@ void Application::createGraphicsPipeline()
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
-    vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
-    inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
-    inputAssembly.primitiveRestartEnable = VK_FALSE;
+    vk::PipelineInputAssemblyStateCreateInfo inputAssembly(vk::PipelineInputAssemblyStateCreateFlags(), vk::PrimitiveTopology::eTriangleList, VK_FALSE);
 
-    vk::Viewport viewport = {};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(_swapChainExtent.width);
-    viewport.height = static_cast<float>(_swapChainExtent.height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
+    vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(_swapChainExtent.width), static_cast<float>(_swapChainExtent.height), 0.0f, 1.0f);
 
-    vk::Rect2D scissor;
-    scissor.offset = vk::Offset2D(0, 0);
-    scissor.extent = _swapChainExtent;
+    vk::Rect2D scissor(vk::Offset2D(0, 0), _swapChainExtent);
 
     vk::PipelineViewportStateCreateInfo viewportState;
     viewportState.viewportCount = 1;
@@ -389,26 +379,13 @@ void Application::createGraphicsPipeline()
     multisampling.sampleShadingEnable = VK_FALSE;
     multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
 
-    vk::PipelineDepthStencilStateCreateInfo depthStencil = {};
-    depthStencil.depthTestEnable = VK_TRUE;
-    depthStencil.depthWriteEnable = VK_TRUE;
-    depthStencil.depthCompareOp = vk::CompareOp::eLess;
-    depthStencil.depthBoundsTestEnable = VK_FALSE;
-    depthStencil.stencilTestEnable = VK_FALSE;
+    vk::PipelineDepthStencilStateCreateInfo depthStencil(vk::PipelineDepthStencilStateCreateFlags(), VK_TRUE, VK_TRUE, vk::CompareOp::eLess, VK_FALSE, VK_FALSE);
 
-    vk::PipelineColorBlendAttachmentState colorBlendAttachment = {};
+    vk::PipelineColorBlendAttachmentState colorBlendAttachment;
     colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
     colorBlendAttachment.blendEnable = VK_FALSE;
 
-    vk::PipelineColorBlendStateCreateInfo colorBlending;
-    colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.logicOp = vk::LogicOp::eCopy;
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &colorBlendAttachment;
-    colorBlending.blendConstants[0] = 0.0f;
-    colorBlending.blendConstants[1] = 0.0f;
-    colorBlending.blendConstants[2] = 0.0f;
-    colorBlending.blendConstants[3] = 0.0f;
+    vk::PipelineColorBlendStateCreateInfo colorBlending(vk::PipelineColorBlendStateCreateFlags(), VK_FALSE, vk::LogicOp::eCopy, 1, &colorBlendAttachment, {{0.0f, 0.0f, 0.0f, 0.0f}});
 
     vk::DescriptorSetLayout setLayouts[] = {_descriptorSetLayout};
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo = {};
@@ -426,9 +403,9 @@ void Application::createGraphicsPipeline()
 
     std::cerr << "Creating pipeline cache..." << std::endl;
     vk::PipelineCacheCreateInfo cacheCreateInfo;
-    vk::Result res = _device.createPipelineCache(&cacheCreateInfo, nullptr, &_cache);
-    if (res != vk::Result::eSuccess) {
-        std::cerr << "Failed to create pipeline cache! error:" << res << std::endl;
+    vk::Result cacheResult = _device.createPipelineCache(&cacheCreateInfo, nullptr, &_cache);
+    if (cacheResult != vk::Result::eSuccess) {
+        std::cerr << "Failed to create pipeline cache! error:" << cacheResult << std::endl;
         std::abort();
     }
 
@@ -507,7 +484,7 @@ void Application::createCommandBuffers()
         renderPassInfo.renderArea.extent = _swapChainExtent;
 
         std::array<vk::ClearValue, 2> clearValues = {};
-        clearValues[0].color = vk::ClearColorValue(std::array<float, 4>{{0.1f, 0.3f, 0.1f, 1.0f}});
+        clearValues[0].color = vk::ClearColorValue(std::array<float, 4>{{0.1f, 0.2f, 0.1f, 1.0f}});
         clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.0f, 0);
 
         renderPassInfo.clearValueCount = clearValues.size();
@@ -549,6 +526,7 @@ void Application::createSemaphores()
     _waitFences.resize(_commandBuffers.size());
     for (auto& fence : _waitFences) {
         if (_device.createFence(&fenceCreateInfo, nullptr, &fence) != vk::Result::eSuccess) {
+            std::cerr << "Failed to create fence!" << std::endl;
             std::abort();
         }
     }
@@ -562,10 +540,9 @@ void Application::updateUniformBuffer()
     float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 1000.0f;
 
     UniformBufferObject ubo = {};
-    glm::mat4 id(1.0f);
-    ubo.model = glm::rotate(id, time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(glm::radians(45.0f), static_cast<float>(_swapChainExtent.width) / static_cast<float>(_swapChainExtent.height), 0.1f, 10.0f);
+    ubo.proj = glm::perspective(glm::radians(45.0f), static_cast<float>(_swapChainExtent.width) / static_cast<float>(_swapChainExtent.height), 0.1f, 100.0f);
     ubo.proj[1][1] *= -1;
 
     void* dataPtr = nullptr;

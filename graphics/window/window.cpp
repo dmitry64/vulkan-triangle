@@ -10,17 +10,17 @@ uint32_t Window::height() const
     return _height;
 }
 
-void Window::setHeight(const uint32_t &height)
+void Window::setHeight(const uint32_t& height)
 {
     _height = height;
 }
 
-void Window::setWidth(const uint32_t &width)
+void Window::setWidth(const uint32_t& width)
 {
     _width = width;
 }
 
-GLFWwindow *Window::getWindow() const
+GLFWwindow* Window::getWindow() const
 {
     return window;
 }
@@ -30,11 +30,11 @@ void Window::pollEvents()
     glfwPollEvents();
 }
 
-std::vector<const char *> Window::getRequiredExtensions(bool validation) {
+std::vector<const char*> Window::getRequiredExtensions(bool validation)
+{
     std::vector<const char*> extensions;
     unsigned int glfwExtensionCount = 0;
-    const char** glfwExtensions;
-    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     for (unsigned int i = 0; i < glfwExtensionCount; i++) {
         extensions.push_back(glfwExtensions[i]);
     }
@@ -68,7 +68,7 @@ bool Window::shouldBeClosed()
     return glfwWindowShouldClose(window);
 }
 
-vk::Result Window::createSurface(vk::Instance &instance, const vk::AllocationCallbacks allocator, vk::SurfaceKHR &surface)
+vk::Result Window::createSurface(vk::Instance& instance, vk::SurfaceKHR& surface)
 {
     assert(window);
     VkSurfaceKHR tmp;
@@ -83,7 +83,9 @@ void Window::setSize(uint32_t width, uint32_t height)
     _height = height;
 }
 
-Window::Window() : _width(640), _height(480), window(nullptr)
+Window::Window()
+    : _width(1024)
+    , _height(768)
+    , window(nullptr)
 {
-
 }

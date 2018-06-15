@@ -118,7 +118,6 @@ static std::vector<char> readFile(const std::string& filename)
         file.seekg(0);
         file.read(buffer.data(), fileSize);
         file.close();
-        // buffer.push_back('\0');
         return buffer;
     }
     else {

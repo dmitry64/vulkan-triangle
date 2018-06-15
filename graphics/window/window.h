@@ -16,7 +16,7 @@ public:
     void init();
     void destroy();
     bool shouldBeClosed();
-    vk::Result createSurface(vk::Instance &instance, const vk::AllocationCallbacks allocator, vk::SurfaceKHR &surface);
+    vk::Result createSurface(vk::Instance &instance, vk::SurfaceKHR &surface);
     void setSize(uint32_t width, uint32_t height);
     Window();
     uint32_t width() const;
