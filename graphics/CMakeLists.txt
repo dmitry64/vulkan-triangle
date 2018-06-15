@@ -1,7 +1,11 @@
+
+include_directories(../stb)
+
 add_subdirectory(window)
 include_directories(window)
 
-add_library(graphics SHARED
+
+add_library(graphics
     "application.cpp"
     "application.h"
     "debugcallbacks.h"
