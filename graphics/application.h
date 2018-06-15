@@ -124,11 +124,6 @@ private:
     vk::DescriptorPool _descriptorPool;
     vk::DescriptorSet _descriptorSet;
 
-    vk::Image _textureImage;
-    vk::DeviceMemory _textureImageMemory;
-    vk::ImageView _textureImageView;
-    vk::Sampler _textureSampler;
-
     vk::Image _depthImage;
     vk::DeviceMemory _depthImageMemory;
     vk::ImageView _depthImageView;
@@ -173,7 +168,6 @@ private:
     void createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags, vk::ImageView& imageView);
     void createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlags properties, vk::Image& image, vk::DeviceMemory& imageMemory);
     void transitionImageLayout(vk::Image image, vk::Format format, vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
-    void copyImage(vk::Image srcImage, vk::Image dstImage, uint32_t width, uint32_t height);
 };
 
 #endif // APPLICATION_H

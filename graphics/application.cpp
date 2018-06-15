@@ -876,30 +876,6 @@ void Application::transitionImageLayout(vk::Image image, vk::Format format, vk::
     endSingleTimeCommands(_device, _graphicsQueue, _commandPool, commandBuffer);
 }
 
-void Application::copyImage(vk::Image srcImage, vk::Image dstImage, uint32_t width, uint32_t height)
-{
-    vk::CommandBuffer commandBuffer = beginSingleTimeCommands(_device, _commandPool);
-
-    vk::ImageSubresourceLayers subResource;
-    subResource.aspectMask = vk::ImageAspectFlagBits::eColor;
-    subResource.baseArrayLayer = 0;
-    subResource.mipLevel = 0;
-    subResource.layerCount = 1;
-
-    vk::ImageCopy region;
-    region.srcSubresource = subResource;
-    region.dstSubresource = subResource;
-    region.srcOffset = vk::Offset3D(0, 0, 0);
-    region.dstOffset = vk::Offset3D(0, 0, 0);
-    region.extent.width = width;
-    region.extent.height = height;
-    region.extent.depth = 1;
-
-    commandBuffer.copyImage(srcImage, vk::ImageLayout::eTransferSrcOptimal, dstImage, vk::ImageLayout::eTransferDstOptimal, 1, &region);
-
-    endSingleTimeCommands(_device, _graphicsQueue, _commandPool, commandBuffer);
-}
-
 void Application::createUniformBuffer()
 {
     vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
@@ -942,11 +918,6 @@ void Application::createDescriptorSet()
     bufferInfo.buffer = _uniformBuffer;
     bufferInfo.offset = 0;
     bufferInfo.range = sizeof(UniformBufferObject);
-
-    vk::DescriptorImageInfo imageInfo;
-    imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-    imageInfo.imageView = _textureImageView;
-    imageInfo.sampler = _textureSampler;
 
     std::array<vk::WriteDescriptorSet, 1> descriptorWrites = {};
 
