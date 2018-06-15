@@ -35,9 +35,6 @@ void Application::initVulkan()
     createCommandPool();
     createDepthResources();
     createFramebuffers();
-    // createTextureImage();
-    // createTextureImageView();
-    // createTextureSampler();
     createVertexBuffer();
     createIndexBuffer();
     createUniformBuffer();
@@ -726,81 +723,6 @@ void Application::createDepthResources()
     createImage(_swapChainExtent.width, _swapChainExtent.height, depthFormat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal, _depthImage, _depthImageMemory);
     createImageView(_depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth, _depthImageView);
     transitionImageLayout(_depthImage, depthFormat, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-}
-
-void Application::createTextureImage()
-{
-    int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load("textures/grass.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-    vk::DeviceSize imageSize = texWidth * texHeight * 4;
-
-    if (!pixels) {
-        std::cerr << "Failed to load texture image!" << std::endl;
-        std::abort();
-    }
-
-    vk::Image stagingImage;
-    vk::DeviceMemory stagingImageMemory;
-    createImage(texWidth, texHeight, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eLinear, vk::ImageUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, stagingImage, stagingImageMemory);
-
-    vk::ImageSubresource subresource;
-    subresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-    subresource.mipLevel = 0;
-    subresource.arrayLayer = 0;
-
-    vk::SubresourceLayout stagingImageLayout;
-    _device.getImageSubresourceLayout(stagingImage, &subresource, &stagingImageLayout);
-
-    void* dataPtr = nullptr;
-    _device.mapMemory(stagingImageMemory, vk::DeviceSize(0), imageSize, vk::MemoryMapFlags(), &dataPtr);
-
-    if (stagingImageLayout.rowPitch == texWidth * 4) {
-        memcpy(dataPtr, pixels, static_cast<size_t>(imageSize));
-    } else {
-        uint8_t* dataBytes = reinterpret_cast<uint8_t*>(dataPtr);
-
-        for (int y = 0; y < texHeight; y++) {
-            memcpy(&dataBytes[y * stagingImageLayout.rowPitch], &pixels[y * texWidth * 4], texWidth * 4);
-        }
-    }
-    _device.unmapMemory(stagingImageMemory);
-
-    stbi_image_free(pixels);
-
-    createImage(texWidth, texHeight, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal, _textureImage, _textureImageMemory);
-
-    // transitionImageLayout(stagingImage, vk::Format::eR8G8B8A8Unorm, vk::ImageLayout::ePreinitialized, vk::ImageLayout::eTransferSrcOptimal);
-    // transitionImageLayout(_textureImage, vk::Format::eR8G8B8A8Unorm, vk::ImageLayout::ePreinitialized, vk::ImageLayout::eTransferDstOptimal);
-    copyImage(stagingImage, _textureImage, texWidth, texHeight);
-
-    // transitionImageLayout(_textureImage, vk::Format::eR8G8B8A8Unorm, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
-}
-
-void Application::createTextureImageView()
-{
-    createImageView(_textureImage, vk::Format::eR8G8B8A8Unorm, vk::ImageAspectFlagBits::eColor, _textureImageView);
-}
-
-void Application::createTextureSampler()
-{
-    vk::SamplerCreateInfo samplerInfo;
-    samplerInfo.magFilter = vk::Filter::eLinear;
-    samplerInfo.minFilter = vk::Filter::eLinear;
-    samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
-    samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
-    samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
-    samplerInfo.anisotropyEnable = VK_FALSE;
-    samplerInfo.maxAnisotropy = 1;
-    samplerInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp = vk::CompareOp::eAlways;
-    samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
-    vk::Result res = _device.createSampler(&samplerInfo, nullptr, &_textureSampler);
-    if (res != vk::Result::eSuccess) {
-        std::cerr << "Failed to create texture sampler!" << std::endl;
-        std::abort();
-    }
 }
 
 void Application::createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags, vk::ImageView& imageView)
