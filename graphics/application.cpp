@@ -68,6 +68,10 @@ void Application::destroyVulkan()
         _device.destroyImageView(imageview);
     }
 
+    if (_commandBuffers.size() > 0) {
+        _device.freeCommandBuffers(_commandPool, static_cast<uint32_t>(_commandBuffers.size()), _commandBuffers.data());
+    }
+
     _device.destroySemaphore(_imageAvailableSemaphore);
     _device.destroySemaphore(_renderFinishedSemaphore);
 
@@ -270,17 +274,19 @@ void Application::createSwapChain()
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
-    createInfo.oldSwapchain = _swapChain;
+    createInfo.oldSwapchain = vk::SwapchainKHR();
 
     vk::SwapchainKHR newSwapChain;
+    _device.waitIdle();
     vk::Result res = _device.createSwapchainKHR(&createInfo, nullptr, &newSwapChain);
     if (res != vk::Result::eSuccess) {
         std::cerr << "Failed to create swap chain! error:" << res << std::endl;
         std::abort();
     }
-
+    _device.waitIdle();
     _swapChain = newSwapChain;
     _device.getSwapchainImagesKHR(_swapChain, &imageCount, nullptr);
+    _swapChainImages.clear();
     _swapChainImages.resize(imageCount);
     _device.getSwapchainImagesKHR(_swapChain, &imageCount, _swapChainImages.data());
     _swapChainImageFormat = surfaceFormat.format;
@@ -643,7 +649,27 @@ void Application::drawFrame()
 void Application::recreateSwapChain()
 {
     std::cerr << "Recreating swap chain..." << std::endl;
+    _graphicsQueue.waitIdle();
+    _presentQueue.waitIdle();
     _device.waitIdle();
+    for (const vk::ImageView& imageview : _swapChainImageViews) {
+        _device.destroyImageView(imageview);
+    }
+    for (const vk::Framebuffer& framebuffer : _swapChainFramebuffers) {
+        _device.destroyFramebuffer(framebuffer);
+    }
+
+    _device.destroyImage(_depthImage);
+    _device.freeMemory(_depthImageMemory);
+    _device.destroyImageView(_depthImageView);
+    _device.destroyShaderModule(_vertShaderModule);
+    _device.destroyShaderModule(_fragShaderModule);
+    _device.destroyPipelineCache(_cache);
+    _device.destroyPipelineLayout(_pipelineLayout);
+    _device.destroyPipeline(_graphicsPipeline);
+    _device.destroyRenderPass(_renderPass);
+    _device.destroySwapchainKHR(_swapChain);
+
     createSwapChain();
     createImageViews();
     createRenderPass();
