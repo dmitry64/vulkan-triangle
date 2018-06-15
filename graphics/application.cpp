@@ -155,6 +155,7 @@ void Application::setupDebugCallback()
         VkResult res = CreateDebugReportCallbackEXT(_instance, &createInfo.operator const VkDebugReportCallbackCreateInfoEXT&(), nullptr, &_callback);
         if (res != VK_SUCCESS) {
             std::cerr << "Failed to set up debug callback! error:" << res << std::endl;
+            std::abort();
         }
     } else {
         std::cerr << "No callbacks..." << std::endl;
