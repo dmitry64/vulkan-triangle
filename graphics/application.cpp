@@ -15,6 +15,7 @@ void Application::run()
     initVulkan();
     mainLoop();
     destroyVulkan();
+    _window.destroy();
 }
 
 void Application::initVulkan()
@@ -49,7 +50,6 @@ void Application::mainLoop()
         updateUniformBuffer();
         drawFrame();
     }
-    _window.destroy();
 }
 
 void Application::destroyVulkan()
