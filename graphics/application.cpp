@@ -5,9 +5,6 @@
 
 Application::Application()
 {
-    _ubo.model = glm::mat4(1.0f);
-    _ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    _ubo.proj = glm::mat4(1.0f);
 }
 
 Application::~Application() {}
@@ -98,9 +95,8 @@ void Application::destroyVulkan()
     _device.destroyPipelineLayout(_pipelineLayout);
     _device.destroyPipeline(_graphicsPipeline);
 
-    _device.destroySwapchainKHR(_swapChain);
-
     _device.destroyRenderPass(_renderPass);
+    _device.destroySwapchainKHR(_swapChain);
 
     _device.destroy(nullptr);
 }
@@ -289,6 +285,7 @@ void Application::createSwapChain()
     _device.getSwapchainImagesKHR(_swapChain, &imageCount, _swapChainImages.data());
     _swapChainImageFormat = surfaceFormat.format;
     _swapChainExtent = extent;
+    assert(_swapChainExtent.height != 0);
 }
 
 void Application::createImageViews()
@@ -576,20 +573,23 @@ void Application::updateUniformBuffer()
 
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 1000.0f;
-
-    _ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    _ubo.proj = glm::perspective(glm::radians(45.0f), static_cast<float>(_swapChainExtent.width) / static_cast<float>(_swapChainExtent.height), 0.1f, 100.0f);
-    _ubo.proj[1][1] *= -1;
-
+    float ratio = static_cast<float>(_swapChainExtent.width) / static_cast<float>(_swapChainExtent.height);
+    UniformBufferObject ubo;
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.proj = glm::perspective(glm::radians(46.0f), ratio, 0.1f, 100.0f);
+    ubo.proj[1][1] *= -1.0f;
     void* dataPtr = nullptr;
-    vk::Result res = _device.mapMemory(_uniformStagingBufferMemory, vk::DeviceSize(0), sizeof(_ubo), vk::MemoryMapFlags(), &dataPtr);
+    _graphicsQueue.waitIdle();
+    vk::Result res = _device.mapMemory(_uniformStagingBufferMemory, vk::DeviceSize(0), sizeof(UniformBufferObject), vk::MemoryMapFlags(), &dataPtr);
     if (res != vk::Result::eSuccess) {
         std::cerr << "Failed to map memory for uniform buffer! error:" << res << std::endl;
         std::abort();
     }
-    memcpy(dataPtr, &_ubo, sizeof(_ubo));
+    memcpy(dataPtr, &ubo, sizeof(UniformBufferObject));
     _device.unmapMemory(_uniformStagingBufferMemory);
-    copyBuffer(_device, _commandPool, _graphicsQueue, _uniformStagingBuffer, _uniformBuffer, sizeof(_ubo));
+    copyBuffer(_device, _commandPool, _graphicsQueue, _uniformStagingBuffer, _uniformBuffer, sizeof(UniformBufferObject));
+    _graphicsQueue.waitIdle();
 }
 
 void Application::drawFrame()
