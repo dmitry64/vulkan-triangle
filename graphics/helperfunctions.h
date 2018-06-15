@@ -108,7 +108,7 @@ static std::vector<char> readFile(const std::string& filename)
 {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
-        std::cerr << "Failed to open file!" << std::endl;
+        std::cerr << "Failed to open file: [" << filename << "]" << std::endl;
         std::abort();
     }
 

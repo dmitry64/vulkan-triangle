@@ -278,13 +278,8 @@ void Application::createRenderPass()
     depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
     depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
-    vk::AttachmentReference colorAttachmentRef;
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-    vk::AttachmentReference depthAttachmentRef = {};
-    depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+    vk::AttachmentReference colorAttachmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
+    vk::AttachmentReference depthAttachmentRef(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
     vk::SubpassDescription subpass;
     subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
@@ -319,6 +314,7 @@ void Application::createGraphicsPipeline()
 {
     std::cerr << "Creating graphics pipeline..." << std::endl;
 
+    // Copy shaders directory from repo or change working directory
     const auto vertShaderCode = readFile("shaders/vert.spv");
     const auto fragShaderCode = readFile("shaders/frag.spv");
 
@@ -474,8 +470,7 @@ void Application::createCommandBuffers()
 
     size_t size = _commandBuffers.size();
     for (size_t i = 0; i < size; i++) {
-        vk::CommandBufferBeginInfo beginInfo;
-        beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+        vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
         vk::RenderPassBeginInfo renderPassInfo;
         renderPassInfo.renderPass = _renderPass;
