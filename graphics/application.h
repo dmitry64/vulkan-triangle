@@ -143,6 +143,7 @@ private:
 private:
     void initVulkan();
     void mainLoop();
+    void destroyVulkan();
     void createInstance();
     void setupDebugCallback();
     void createSurface();
@@ -180,8 +181,6 @@ private:
     void createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlags properties, vk::Image& image, vk::DeviceMemory& imageMemory);
     void transitionImageLayout(vk::Image image, vk::Format format, vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
     void copyImage(vk::Image srcImage, vk::Image dstImage, uint32_t width, uint32_t height);
-
-    void prepareSynchronizationPrimitives();
 };
 
 #endif  // APPLICATION_H
