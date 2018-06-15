@@ -152,7 +152,11 @@ static QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice& physicalDevice, 
             indices.graphicsFamily = i;
         }
         vk::Bool32 presentSupport = false;
-        physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), surface, &presentSupport);
+        vk::Result res = physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), surface, &presentSupport);
+        if (res != vk::Result::eSuccess) {
+            std::cerr << "Failed to get surface support! error:" << res << std::endl;
+            std::abort();
+        }
         if (queueFamily.queueCount > 0 && presentSupport) {
             indices.presentFamily = i;
         }
@@ -196,7 +200,7 @@ static void endSingleTimeCommands(vk::Device& device, vk::Queue& graphicsQueue, 
 
 static void createShaderModule(vk::Device& device, const std::vector<char>& code, vk::ShaderModule& shaderModule)
 {
-    // assert(code.size() % 4 == 0);
+    assert(code.size() % 4 == 0);
     vk::ShaderModuleCreateInfo createInfo(vk::ShaderModuleCreateFlags(), code.size(), reinterpret_cast<const uint32_t*>(code.data()));
 
     vk::Result res = device.createShaderModule(&createInfo, nullptr, &shaderModule);
@@ -302,7 +306,7 @@ static void copyBuffer(vk::Device& device, vk::CommandPool& commandPool, vk::Que
         std::cerr << "Graphics queue submit failed! error:" << submitRes << std::endl;
         std::abort();
     }
-    vk::Result fenceWaitRes = device.waitForFences(1, &fence, VK_TRUE, 100 * 1000 * 1000);
+    vk::Result fenceWaitRes = device.waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
     if (fenceWaitRes != vk::Result::eSuccess) {
         std::cerr << "Wait on fence failed! error:" << fenceWaitRes << std::endl;
         std::abort();

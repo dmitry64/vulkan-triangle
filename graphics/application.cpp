@@ -3,7 +3,12 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-Application::Application() {}
+Application::Application()
+{
+    _ubo.model = glm::mat4(1.0f);
+    _ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    _ubo.proj = glm::mat4(1.0f);
+}
 
 Application::~Application() {}
 
@@ -574,21 +579,19 @@ void Application::updateUniformBuffer()
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 1000.0f;
 
-    UniformBufferObject ubo = {};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(glm::radians(45.0f), static_cast<float>(_swapChainExtent.width) / static_cast<float>(_swapChainExtent.height), 0.1f, 100.0f);
-    ubo.proj[1][1] *= -1;
+    _ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    _ubo.proj = glm::perspective(glm::radians(45.0f), static_cast<float>(_swapChainExtent.width) / static_cast<float>(_swapChainExtent.height), 0.1f, 100.0f);
+    _ubo.proj[1][1] *= -1;
 
     void* dataPtr = nullptr;
-    vk::Result res = _device.mapMemory(_uniformStagingBufferMemory, vk::DeviceSize(0), sizeof(ubo), vk::MemoryMapFlags(), &dataPtr);
+    vk::Result res = _device.mapMemory(_uniformStagingBufferMemory, vk::DeviceSize(0), sizeof(_ubo), vk::MemoryMapFlags(), &dataPtr);
     if (res != vk::Result::eSuccess) {
         std::cerr << "Failed to map memory for uniform buffer! error:" << res << std::endl;
         std::abort();
     }
-    memcpy(dataPtr, &ubo, sizeof(ubo));
+    memcpy(dataPtr, &_ubo, sizeof(_ubo));
     _device.unmapMemory(_uniformStagingBufferMemory);
-    copyBuffer(_device, _commandPool, _graphicsQueue, _uniformStagingBuffer, _uniformBuffer, sizeof(ubo));
+    copyBuffer(_device, _commandPool, _graphicsQueue, _uniformStagingBuffer, _uniformBuffer, sizeof(_ubo));
 }
 
 void Application::drawFrame()
@@ -604,21 +607,19 @@ void Application::drawFrame()
         std::abort();
     }
 
-    _device.waitForFences(1, &_waitFences[imageIndex], VK_TRUE, UINT64_MAX);
+    _device.waitForFences(1, &_waitFences[imageIndex], VK_TRUE, std::numeric_limits<uint64_t>::max());
     _device.resetFences(1, &_waitFences[imageIndex]);
 
-    vk::SubmitInfo submitInfo;
-    vk::Semaphore waitSemaphores[] = { _imageAvailableSemaphore };
     vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+
+    vk::SubmitInfo submitInfo;
     submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitSemaphores = &_imageAvailableSemaphore;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &_commandBuffers[imageIndex];
-
-    vk::Semaphore signalSemaphores[] = { _renderFinishedSemaphore };
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
+    submitInfo.pSignalSemaphores = &_renderFinishedSemaphore;
 
     vk::Result submitResult = _graphicsQueue.submit(1, &submitInfo, _waitFences[imageIndex]);
     if (submitResult != vk::Result::eSuccess) {
@@ -626,13 +627,11 @@ void Application::drawFrame()
         std::abort();
     }
 
-    vk::PresentInfoKHR presentInfo = {};
+    vk::PresentInfoKHR presentInfo;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
-
-    vk::SwapchainKHR swapChains[] = { _swapChain };
+    presentInfo.pWaitSemaphores = &_renderFinishedSemaphore;
     presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
+    presentInfo.pSwapchains = &_swapChain;
     presentInfo.pImageIndices = &imageIndex;
 
     vk::Result presentResult = _presentQueue.presentKHR(&presentInfo);

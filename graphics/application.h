@@ -140,6 +140,8 @@ private:
     vk::ShaderModule _vertShaderModule;
     vk::ShaderModule _fragShaderModule;
 
+    UniformBufferObject _ubo;
+
 private:
     void initVulkan();
     void mainLoop();
