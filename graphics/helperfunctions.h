@@ -271,10 +271,7 @@ static void createBuffer(vk::Device& device, vk::PhysicalDevice& physicalDevice,
 
 static void copyBuffer(vk::Device& device, vk::CommandPool& commandPool, vk::Queue& graphicsQueue, vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size)
 {
-    vk::CommandBufferAllocateInfo allocInfo;
-    allocInfo.level = vk::CommandBufferLevel::ePrimary;
-    allocInfo.commandPool = commandPool;
-    allocInfo.commandBufferCount = 1;
+    vk::CommandBufferAllocateInfo allocInfo(commandPool, vk::CommandBufferLevel::ePrimary, 1);
 
     vk::CommandBuffer commandBuffer;
     vk::Result allocationResult = device.allocateCommandBuffers(&allocInfo, &commandBuffer);
@@ -283,11 +280,8 @@ static void copyBuffer(vk::Device& device, vk::CommandPool& commandPool, vk::Que
         std::abort();
     }
 
-    vk::CommandBufferBeginInfo beginInfo;
-    beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-
-    vk::BufferCopy copyRegion;
-    copyRegion.size = size;
+    vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    vk::BufferCopy copyRegion(0, 0, size);
 
     if (commandBuffer.begin(&beginInfo) == vk::Result::eSuccess) {
         commandBuffer.copyBuffer(srcBuffer, dstBuffer, 1, &copyRegion);
