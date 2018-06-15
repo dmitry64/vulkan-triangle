@@ -302,7 +302,7 @@ static void copyBuffer(vk::Device& device, vk::CommandPool& commandPool, vk::Que
         std::cerr << "Graphics queue submit failed! error:" << submitRes << std::endl;
         std::abort();
     }
-    vk::Result fenceWaitRes = device.waitForFences(1, &fence, VK_TRUE, 3 * 1000 * 1000);
+    vk::Result fenceWaitRes = device.waitForFences(1, &fence, VK_TRUE, 100 * 1000 * 1000);
     if (fenceWaitRes != vk::Result::eSuccess) {
         std::cerr << "Wait on fence failed! error:" << fenceWaitRes << std::endl;
         std::abort();
