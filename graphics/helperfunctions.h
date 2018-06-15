@@ -6,17 +6,17 @@
 #include <iostream>
 #include <vulkan/vulkan.hpp>
 
-struct SwapChainSupportDetails {
+struct SwapChainSupportDetails
+{
     vk::SurfaceCapabilitiesKHR capabilities;
     std::vector<vk::SurfaceFormatKHR> formats;
     std::vector<vk::PresentModeKHR> presentModes;
 };
 
-const std::vector<const char*> validationLayers = {
-    "VK_LAYER_LUNARG_standard_validation"
-};
+const std::vector<const char*> validationLayers = {"VK_LAYER_LUNARG_standard_validation", "VK_LAYER_LUNARG_parameter_validation", "VK_LAYER_LUNARG_parameter_validation", "VK_LAYER_LUNARG_object_tracker", "VK_LAYER_GOOGLE_threading", "VK_LAYER_LUNARG_core_validation"};
 
-struct QueueFamilyIndices {
+struct QueueFamilyIndices
+{
     int graphicsFamily = -1;
     int presentFamily = -1;
 
@@ -57,7 +57,7 @@ static bool hasStencilComponent(vk::Format format)
 static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)
 {
     if (availableFormats.size() == 1 && availableFormats[0].format == vk::Format::eUndefined) {
-        return { vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
+        return {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
     }
     for (const auto& availableFormat : availableFormats) {
         if (availableFormat.format == vk::Format::eB8G8R8A8Unorm && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
@@ -73,7 +73,8 @@ static vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentMod
     for (const auto& availablePresentMode : availablePresentModes) {
         if (availablePresentMode == vk::PresentModeKHR::eMailbox) {
             return availablePresentMode;
-        } else if (availablePresentMode == vk::PresentModeKHR::eImmediate) {
+        }
+        else if (availablePresentMode == vk::PresentModeKHR::eImmediate) {
             bestMode = availablePresentMode;
         }
     }
@@ -88,7 +89,8 @@ static vk::Format findSupportedFormat(vk::PhysicalDevice& physicalDevice, const 
 
         if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
             return format;
-        } else if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
+        }
+        else if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
             return format;
         }
     }
@@ -99,12 +101,7 @@ static vk::Format findSupportedFormat(vk::PhysicalDevice& physicalDevice, const 
 
 static vk::Format findDepthFormat(vk::PhysicalDevice& physicalDevice)
 {
-    return findSupportedFormat(physicalDevice,
-        { vk::Format::eD32Sfloat,
-            vk::Format::eD32SfloatS8Uint,
-            vk::Format::eD24UnormS8Uint },
-        vk::ImageTiling::eOptimal,
-        vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+    return findSupportedFormat(physicalDevice, {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint}, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 }
 
 static std::vector<char> readFile(const std::string& filename)
@@ -121,9 +118,10 @@ static std::vector<char> readFile(const std::string& filename)
         file.seekg(0);
         file.read(buffer.data(), fileSize);
         file.close();
-        buffer.push_back('\0');
+        // buffer.push_back('\0');
         return buffer;
-    } else {
+    }
+    else {
         std::cerr << "Empty file: " << filename << std::endl;
         std::abort();
     }
@@ -204,12 +202,8 @@ static void endSingleTimeCommands(vk::Device& device, vk::Queue& graphicsQueue, 
 
 static void createShaderModule(vk::Device& device, const std::vector<char>& code, vk::ShaderModule& shaderModule)
 {
-    std::cout << "SHADER:" << std::endl;
-    std::cout << std::string(code.data()) << std::endl;
-    std::vector<uint32_t> codeAligned(code.size() / 4 + 1);
-    std::fill(codeAligned.begin(), codeAligned.end(), 0);
-    memcpy(codeAligned.data(), code.data(), code.size());
-    vk::ShaderModuleCreateInfo createInfo(vk::ShaderModuleCreateFlags(), codeAligned.size() * 4, codeAligned.data());
+    // assert(code.size() % 4 == 0);
+    vk::ShaderModuleCreateInfo createInfo(vk::ShaderModuleCreateFlags(), code.size(), reinterpret_cast<const uint32_t*>(code.data()));
 
     vk::Result res = device.createShaderModule(&createInfo, nullptr, &shaderModule);
     if (res != vk::Result::eSuccess) {
@@ -222,8 +216,9 @@ static vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilit
 {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
-    } else {
-        vk::Extent2D actualExtent = { width, height };
+    }
+    else {
+        vk::Extent2D actualExtent = {width, height};
         actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
         actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
         return actualExtent;
@@ -283,16 +278,26 @@ static void copyBuffer(vk::Device& device, vk::CommandPool& commandPool, vk::Que
     allocInfo.commandBufferCount = 1;
 
     vk::CommandBuffer commandBuffer;
-    device.allocateCommandBuffers(&allocInfo, &commandBuffer);
+    vk::Result allocationResult = device.allocateCommandBuffers(&allocInfo, &commandBuffer);
+    if (allocationResult != vk::Result::eSuccess) {
+        std::cerr << "Allocation failed! code" << allocationResult << std::endl;
+        std::abort();
+    }
 
     vk::CommandBufferBeginInfo beginInfo;
     beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
     vk::BufferCopy copyRegion;
     copyRegion.size = size;
-    commandBuffer.begin(&beginInfo);
-    commandBuffer.copyBuffer(srcBuffer, dstBuffer, 1, &copyRegion);
-    commandBuffer.end();
+
+    if (commandBuffer.begin(&beginInfo) == vk::Result::eSuccess) {
+        commandBuffer.copyBuffer(srcBuffer, dstBuffer, 1, &copyRegion);
+        commandBuffer.end();
+    }
+    else {
+        std::cerr << "Failed to begin command buffer!" << std::endl;
+        std::abort();
+    }
 
     vk::SubmitInfo submitInfo;
     submitInfo.commandBufferCount = 1;
@@ -300,11 +305,11 @@ static void copyBuffer(vk::Device& device, vk::CommandPool& commandPool, vk::Que
 
     vk::Result res = graphicsQueue.submit(1, &submitInfo, nullptr);
     if (res != vk::Result::eSuccess) {
-        std::cerr << "Graphics queue submit failed!";
+        std::cerr << "Graphics queue submit failed!" << std::endl;
         std::abort();
     }
     graphicsQueue.waitIdle();
     device.freeCommandBuffers(commandPool, 1, &commandBuffer);
 }
 
-#endif // HELPERFUNCTIONS_H
+#endif  // HELPERFUNCTIONS_H
