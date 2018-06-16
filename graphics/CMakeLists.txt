@@ -1,5 +1,3 @@
-include_directories(../stb)
-
 add_subdirectory(window)
 include_directories(window)
 
