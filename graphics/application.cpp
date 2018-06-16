@@ -1,5 +1,13 @@
 #include "application.h"
 
+#include <algorithm>
+#include <chrono>
+#include <cstring>
+#include <fstream>
+#include <functional>
+#include <iostream>
+#include <set>
+
 Application::Application()
 {
 }
